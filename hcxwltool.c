@@ -10,7 +10,6 @@
 #include <sys/types.h>
 #include <stdbool.h>
 
-#include "include/version.h"
 #include "include/hcxwltool.h"
 
 /*===========================================================================*/
@@ -526,7 +525,7 @@ if(len >= 6)
 return len;
 }
 /*===========================================================================*/
-static inline size_t chop(char *buffer, size_t len)
+static size_t chop(char *buffer, size_t len)
 {
 static char *ptr;
 
@@ -548,7 +547,7 @@ while(len)
 return len;
 }
 /*---------------------------------------------------------------------------*/
-static inline int fgetline(FILE *fh_in, size_t size, char *buffer)
+static int fgetline(FILE *fh_in, size_t size, char *buffer)
 {
 static size_t len;
 static char *buffptr;
@@ -563,7 +562,7 @@ len = chop(buffptr, len);
 return len;
 }
 /*===========================================================================*/
-static inline void processwordlist(char *wordlistinname, FILE *fh_out)
+static void processwordlist(char *wordlistinname, FILE *fh_out)
 {
 static int len;
 static FILE *fh_in;
@@ -611,14 +610,14 @@ return;
 }
 /*===========================================================================*/
 __attribute__ ((noreturn))
-static inline void version(char *eigenname)
+static void version(char *eigenname)
 {
-printf("%s %s (C) %s ZeroBeat\n", eigenname, VERSION, VERSION_JAHR);
+printf("%s %s (C) %s ZeroBeat\n", eigenname, VERSION_TAG, VERSION_YEAR);
 exit(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------*/
 __attribute__ ((noreturn))
-static inline void usage(char *eigenname)
+static void usage(char *eigenname)
 {
 printf("%s %s (C) %s ZeroBeat\n"
 	"usage:\n"
@@ -645,15 +644,15 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"hcxwltool -i wordlist --digit --length=10 | sort | uniq |  | sort | uniq | hashcat -m 2500 hashfile.hccapx\n"
 	"hcxwltool -i wordlist --digit | sort | uniq | hashcat -m 16800 hashfile.16800\n"
 	"hcxwltool -i wordlist --xdigit | sort | uniq | john --stdin --format=wpapsk-opencl hashfile.16800\n"
-	"\n", eigenname, VERSION, VERSION_JAHR, eigenname);
+	"\n", eigenname, VERSION_TAG, VERSION_YEAR, eigenname);
 exit(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------*/
 __attribute__ ((noreturn))
-static inline void usageerror(char *eigenname)
+static void usageerror(char *eigenname)
 {
 printf("%s %s (C) %s by ZeroBeat\n"
-	"usage: %s -h for help\n", eigenname, VERSION, VERSION_JAHR, eigenname);
+	"usage: %s -h for help\n", eigenname, VERSION_TAG, VERSION_YEAR, eigenname);
 exit(EXIT_FAILURE);
 }
 /*===========================================================================*/

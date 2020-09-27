@@ -17,7 +17,6 @@
 #include <utime.h>
 #include <curl/curl.h>
 
-#include "include/version.h"
 #include "include/strings.c"
 
 #include "common.h"
@@ -340,6 +339,11 @@ static char *vendorptr;
 static unsigned long long int vendoroui;
 static char linein[LINEBUFFER];
 static char vendorapname[256];
+#ifdef BIG_ENDIAN_HOST
+int lsb = oui & 0xf;
+#else
+int lsb = (oui >> 16) & 0xf;
+#endif
 
 if ((fhoui = fopen(ouiname, "r")) == NULL)
 	{
@@ -362,12 +366,15 @@ while((len = fgetline(fhoui, LINEBUFFER, linein)) != -1)
 			if(vendorptr != NULL)
 				{
 				strncpy(vendorapname, vendorptr +1,255);
+				break;
 				}
 			}
 		}
 	}
 
-fprintf(stdout, "\nVENDOR: %s\n\n", vendorapname);
+fprintf(stdout, "\nVENDOR: %s (%s)%s\n\n", vendorapname,
+        oui == 0xffffff ? "broadcast" : lsb & 2 ? "LAA - likely randomized!" : "UAA",
+        oui == 0xffffff ? "" : lsb & 1 ? ", multicast" : ", unicast");
 
 fclose(fhoui);
 return;
@@ -421,14 +428,14 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"              : internet connection required\n"
 	"-m <mac>      : mac (six bytes of mac addr) or \n"
 	"              : oui (fist three bytes of mac addr)\n"
-	"-p <hashline> : input PMKID hashline\n"
+	"-p <hashline> : input PMKID and/or EAPOL hashline (hashmode 22000 or 16800)\n"
 	"-P <hashline> : input EAPOL hashline from potfile (hashcat <= 5.1.0)\n"
 	"-e <ESSID>    : input ESSID\n"
 	"-x <xdigit>   : input ESSID in hex\n"
 	"-e <ESSID>    : input ESSID\n"
 	"-v <vendor>   : vendor name\n"
 	"-h            : this help screen\n"
-	"\n", eigenname, VERSION, VERSION_JAHR, eigenname);
+	"\n", eigenname, VERSION_TAG, VERSION_YEAR, eigenname);
 exit(EXIT_SUCCESS);
 }
 /*===========================================================================*/
@@ -438,7 +445,9 @@ static int auswahl;
 static int mode = 0;
 static int ret;
 static int l;
+static int p1, p2;
 static unsigned long long int oui = 0;
+static char *hashlineend;
 
 static uid_t uid;
 static struct passwd *pwd;
@@ -453,6 +462,10 @@ static char *confdirname = ".hcxtools";
 static char *ouinameuser = ".hcxtools/oui.txt";
 static char *ouinamesystemwide = "/usr/share/ieee-data/oui.txt";
 
+static char pmkidtype[] = {"WPA*01*" };
+static char eapoltype[] = {"WPA*02*" };
+static char pmkidtypeend[] = {"***" };
+
 while ((auswahl = getopt(argc, argv, "m:v:p:P:e:x:dh")) != -1)
 	{
 	switch (auswahl)
@@ -462,22 +475,24 @@ while ((auswahl = getopt(argc, argv, "m:v:p:P:e:x:dh")) != -1)
 		break;
 
 		case 'm':
-		if(strlen(optarg) == 6)
+		l= strlen(optarg);
+		if((l > 17) || (l < 6))
 			{
-			oui = strtoull(optarg, NULL, 16);
-			mode = 'm';
-			}
-
-		else if(strlen(optarg) == 12)
-			{
-			oui = (strtoull(optarg, NULL, 16) >> 24);
-			mode = 'm';
-			}
-		else
-			{
-			fprintf(stderr, "error wrong oui size %s (need 1122334455aa or 1122aa)\n", optarg);
+			fprintf(stderr, "error wrong oui size %s (need eg. 11:22:33:44:55:aa or 112233)\n", optarg);
 			exit(EXIT_FAILURE);
 			}
+		p2 = 0;
+		for(p1 = 0; p1 < l; p1++)
+			{
+			if(isxdigit(optarg[p1]))
+				{
+				optarg[p2] = optarg[p1];
+				p2++;
+				}
+			}
+		optarg[6] = 0;
+		oui = strtoull(optarg, NULL, 16);
+		mode = 'm';
 		break;
 
 		case 'p':
@@ -487,6 +502,18 @@ while ((auswahl = getopt(argc, argv, "m:v:p:P:e:x:dh")) != -1)
 			{
 			fprintf(stderr, "error hashline too short %s\n", optarg);
 			exit(EXIT_FAILURE);
+			}
+		if(memcmp(&pmkidtype, hash16800line, 7) == 0)
+			{
+			hash16800line += 7;
+			l -=7;
+			if(memcmp(&pmkidtypeend, &hash16800line[l -3], 3) == 0) hash16800line[l -3] = 0;
+			}
+		if(memcmp(&eapoltype, hash16800line, 7) == 0)
+			{
+			hash16800line += 7;
+			hashlineend = strchr(&hash16800line[59], '*');
+			if(hashlineend != NULL) hashlineend[0] = 0;
 			}
 		if(((hash16800line[32] != ':') && (hash16800line[45] != ':') && (hash16800line[58] != ':')) && ((hash16800line[32] != '*') && (hash16800line[45] != '*') && (hash16800line[58] != '*')))
 			{
@@ -513,7 +540,7 @@ while ((auswahl = getopt(argc, argv, "m:v:p:P:e:x:dh")) != -1)
 		break;
 
 		case 'v':
-		vendorname = optarg;;
+		vendorname = optarg;
 		mode = 'v';
 		break;
 
@@ -560,6 +587,7 @@ if(stat(confdirname, &statinfo) == -1)
 if(mode == 'd')
 	{
 	downloadoui(ouinameuser);
+	return EXIT_SUCCESS;
 	}
 
 if(stat(ouinamesystemwide, &statinfo) == 0)
@@ -575,7 +603,7 @@ if(ouiname == NULL)
 	fprintf(stderr, "failed read oui.txt\n"
 			"use download option -d to download it\n"
 			"or download file http://standards-oui.ieee.org/oui.txt\n"
-			"and save it to ~.hcxtools/oui.txt\n");
+			"and save it to ~/.hcxtools/oui.txt\n");
 	exit(EXIT_FAILURE);
 	}
 if(stat(ouiname, &statinfo) < 0)
@@ -583,7 +611,7 @@ if(stat(ouiname, &statinfo) < 0)
 	fprintf(stderr, "failed read oui.txt\n"
 			"use download option -d to download it\n"
 			"or download file http://standards-oui.ieee.org/oui.txt\n"
-			"and save it to ~.hcxtools/oui.txt\n");
+			"and save it to ~/.hcxtools/oui.txt\n");
 	exit(EXIT_FAILURE);
 	}
 if(mode == 'm')
@@ -612,6 +640,12 @@ else if(mode == 'e')
 else if(mode == 'x')
 	{
 	getessidinfo(essidname);
+	}
+
+else
+	{
+	usage(basename(argv[0]));
+	return EXIT_FAILURE;
 	}
 
 return EXIT_SUCCESS;

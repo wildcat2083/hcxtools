@@ -8,7 +8,7 @@ and recommended by hashcat. This branch is pretty closely synced to hashcat git 
 (that means: latest hcxtools matching on latest hashcat beta) and John the Ripper
 git branch ("bleeding-jumbo").
 
-Support for hashcat hash-modes: 2500, 2501, 4800, 5500, 12000, 16100, 16800, 16801
+Support for hashcat hash-modes: 2500, 2501, 4800, 5500, 12000, 16100, 16800, 16801, 22000, 22001
  
 Support for John the Ripper hash-modes: WPAPSK-PMK, PBKDF2-HMAC-SHA1, chap, netntlm, tacacs-plus
 
@@ -32,44 +32,65 @@ Read this post: hcxtools - solution for capturing wlan traffic and conversion to
 Read this post: New attack on WPA/WPA2 using PMKID (https://hashcat.net/forum/thread-7717.html)
 
 
-
-
 Detailed description
 --------------
 
-| Tool           | Description                                                                                                       |
-| -------------- | ----------------------------------------------------------------------------------------------------------------- |
-| hcxpcaptool    | Shows info of pcap/pcapng file and convert it to other hashformats accepted by hashcat and John the Ripper        |
-| hcxpsktool     | Calculates candidates for hashcat and john based on based on hcxpcaptool output (-o, -z- -U) or commandline input |
-| hcxwltool      | Calculates candidates for hashcat and john based on hcxpcaptool output (-E, -I- -U)                               |
-| hcxhash2cap    | Converts hash file (PMKID, EAPOL-hccapx, EAPOL-hccap, WPAPSK-john) to cap                                         |
-| whoismac       | Show vendor information and/or download oui reference list                                                        |
-| wlancap2wpasec | Upload multiple caps to https://wpa-sec.stanev.org                                                                |
-| -------------- | ----------------------------------------------------------------------------------------------------------------- |
-| hcxhashcattool | Convert old hashcat (<= 5.1.0) separate potfile (2500 and/or 16800) to new potfile format                         |
-| wlanhc2hcx     | Converts hccap to hccapx                                                                                          |
-| wlanwkp2hcx    | Converts wpk (ELMCOMSOFT EWSA projectfile) to hccapx                                                              |
-| wlanhcx2essid  | Merges hccapx containing the same ESSID                                                                           |
-| wlanhcx2ssid   | Strips BSSID, ESSID, OUI                                                                                          |
-| wlanhcxinfo    | Shows detailed info from contents of hccapxfile                                                                   |
-| wlanhcxmnc     | Help to calculate hashcat's nonce-error-corrections value on byte number xx of an anonce                          |
-| wlanhashhcx    | Generate hashlist from hccapx hashfile (md5_64 hash:mac_ap:mac_sta:essid)                                         |
-| wlanhcxcat     | Simple password recovery tool for WPA/WPA2/WPA2 SHA256 AES-128-CMAC (hash-modes 2500, 2501)                       |
-| wlanpmk2hcx    | Converts plainmasterkey and ESSID for use with hashcat hash-mode 12000 or john PBKDF2-HMAC-SHA1                   |
-| wlanjohn2hcx   | Converts john wpapsk hashfiles for use with hashcat hash-modes 2500, 2501                                         |
-| wlancow2hcxpmk | Converts pre-computed cowpatty hashfiles for use with hashcat hash-mode 2501                                      |
-| wlanhcx2john   | Converts hccapx to format expected by John the Ripper                                                             |
+| Tool           | Description                                                                                                            |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| hcxpcapngtool  | Provide new hashcat format 22000                                                                                       |
+| hcxhashtool    | Provide various filter operations on new PMKID/EAPOL hash line                                                         |
+| hcxpsktool     | Calculates candidates for hashcat and john based on based on hcxpcapngtool output or commandline input                 |
+| hcxwltool      | Calculates candidates for hashcat and john based on hcxpcapngtool output (-E -I -U)                                    |
+| hcxhash2cap    | Converts hash file (PMKID&EAPOL, PMKID, EAPOL-hccapx, EAPOL-hccap, WPAPSK-john) to cap                                 |
+| wlancap2wpasec | Upload multiple (gzip compressed) pcapng, pcap and cap files to https://wpa-sec.stanev.org                             |
+| whoismac       | Show vendor information and/or download oui reference list                                                             |
 
+
+| deprecated     | obsolete and - no longer under maintenance - will be removed, soon                                                     |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| hcxmactool     | Various MAC based filter operations on HCCAPX and PMKID files - convert hccapx and/or PMKID to new hashline format     |
+| hcxpmkidtool   | CPU based tools to verfiy a PMKID                                                                                      |
+| hcxessidtool   | Various ESSID based filter operations on HCCAPX and PMKID files                                                        |
+| hcxhashcattool | Convert old hashcat (<= 5.1.0) separate potfile (2500 and/or 16800) to new potfile format                              |
+| wlanpmk2hcx    | Converts plainmasterkey and ESSID for use with hashcat hash-mode 12000 or john PBKDF2-HMAC-SHA1                        |
+
+
+Get source
+--------------
+```
+git clone https://github.com/ZerBea/hcxtools.git
+cd hcxtools
+```
 
 Compile
 --------------
-
-Simply run:
-
 ```
 make
 make install (as super user)
 ```
+
+Or install via packet manager of your distribution
+--------------
+
+### Arch Linux
+[Arch Linux](https://www.archlinux.org/) 
+`pacman -S hcxtools`
+
+### Arch Linux ARM
+[Arch Linux ARM ](https://archlinuxarm.org/) 
+`pacman -S hcxtools`
+
+### Black Arch
+[Black Arch](https://blackarch.org/) is an Arch Linux-based penetration testing distribution for penetration testers and security researchers  
+`pacman -S hcxtools`
+
+### Kali Linux
+`apt install hcxtools`
+
+
+### macOS
+[Homebrew](https://brew.sh/) is 3-rd party package manager for macOS  
+`brew install hcxtools`
 
 
 Requirements
@@ -105,8 +126,10 @@ Notice
 
 Most output files will be appended to existing files (with the exception of pcapng, pcap, cap files).
 
+It is recommended to use hash mode 22000 (22001) instead of deprecated hash modes 2500 (2501) and 16800 (16801)
 
-Bitmask message pair field (hcxpcaptool)
+
+Bitmask message pair field (hcxpcapngtool)
 --------------
 
 0: MP info (https://hashcat.net/wiki/doku.php?id=hccapx#message_pair_table)
@@ -117,11 +140,11 @@ Bitmask message pair field (hcxpcaptool)
 
 3: x unused
 
-4: ap-less attack (set to 1) - no nonce-error-corrections neccessary
+4: ap-less attack (set to 1) - no nonce-error-corrections necessary
 
-5: LE router detected (set to 1) - nonce-error-corrections only for LE neccessary
+5: LE router detected (set to 1) - nonce-error-corrections only for LE necessary
 
-6: BE router detected (set to 1) - nonce-error-corrections only for BE neccessary
+6: BE router detected (set to 1) - nonce-error-corrections only for BE necessary
 
-7: not replaycount checked (set to 1) - replaycount not checked, nonce-error-corrections definitely neccessary
+7: not replaycount checked (set to 1) - replaycount not checked, nonce-error-corrections definitely necessary
 

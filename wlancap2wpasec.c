@@ -15,7 +15,6 @@
 #endif
 #include <curl/curl.h>
 
-#include "include/version.h"
 #include "common.h"
 
 
@@ -108,7 +107,7 @@ return uploadflag;
 __attribute__ ((noreturn))
 void version(char *eigenname)
 {
-printf("%s %s (C) %s ZeroBeat\n", eigenname, VERSION, VERSION_JAHR);
+printf("%s %s (C) %s ZeroBeat\n", eigenname, VERSION_TAG, VERSION_YEAR);
 exit(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------*/
@@ -140,7 +139,7 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"To reduce the size of the cap file, compress it with gzip:\n"
 	"gzip capture.pcapng\n"
 	"\n"
-	"\n", eigenname, VERSION, VERSION_JAHR, eigenname, eigenname, eigenname, eigenname, wpasecurl);
+	"\n", eigenname, VERSION_TAG, VERSION_YEAR, eigenname, eigenname, eigenname, eigenname, wpasecurl);
 exit(EXIT_FAILURE);
 }
 /*===========================================================================*/
@@ -149,7 +148,7 @@ int main(int argc, char *argv[])
 struct stat statinfo;
 int auswahl;
 int index;
-char keyheader[4+32+1] = {0};
+char keyheader[4+32+1+2] = {0};
 char *emailaddr = NULL;
 long int timeout = 30;
 uploadcountok = 0;
@@ -163,7 +162,7 @@ while ((auswahl = getopt(argc, argv, "k:u:t:e:Rhv")) != -1)
 		case 'k':
 		if((strlen(optarg) == 32) && (optarg[strspn(optarg, "0123456789abcdefABCDEF")] == 0))
 			{
-			snprintf(keyheader, sizeof(keyheader), "key=%s32", optarg);
+			snprintf(keyheader, sizeof(keyheader), "key=%s", optarg);
 			printf("\x1B[32muser key set\x1B[0m\n");
 			}
 		else

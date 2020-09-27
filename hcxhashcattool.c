@@ -18,7 +18,6 @@
 #include <pthread.h>
 #include <openssl/evp.h>
 
-#include "include/version.h"
 #include "include/hashcatops.h"
 #include "include/strings.c"
 
@@ -89,7 +88,7 @@ for(c = 0; c < pmkcount; c++)
 		{
 		fprintf(fhpmk, "%02x", zeiger->pmk[d]);
 		}
-	fprintf(fhpmk, ":");
+	fprintf(fhpmk, "*");
 	for(p = 0; p < zeiger->essidlen; p++)
 		{
 		fprintf(fhpmk, "%02x",zeiger->essid[p]);
@@ -292,7 +291,7 @@ if((potline[58] != ':') && (potline[58]  != '*'))
 	}
 
 essidptr = potline +59;
-pskptr = strrchr(potline +59, ':');
+pskptr = strchr(potline +59, ':');
 if (pskptr == NULL)
 	{
 	printf("sperator doesn't match: %s\n", potline);
@@ -300,7 +299,6 @@ if (pskptr == NULL)
 	}
 pskptr[0] = 0;
 pskptr++;
-
 if(potline[58] == ':')
 	{
 	essidlen = ishexify(essidptr);
@@ -335,14 +333,6 @@ else if(potline[58] == '*')
 		return;
 		}
 	pmktmp.essidlen = essidlen;
-	for(c = 0; c < essidlen; c++)
-		{
-		if((pmktmp.essid[c] < 0x20) || (pmktmp.essid[c] > 0x7e) || (pmktmp.essid[c] == ':'))
-			{
-			pmktmp.essidflag = true;
-			break;
-			}
-		}
 	}
 else
 	{
@@ -370,6 +360,15 @@ else
 		}
 	memcpy(&pmktmp.psk, pskptr, psklen);
 	pmktmp.pskflag = false;
+
+	for(c = 0; c < psklen; c++)
+		{
+		if((pmktmp.psk[c] < 0x20) || (pmktmp.psk[c] > 0x7e) || (pmktmp.psk[c] == ':'))
+			{
+			pmktmp.pskflag = true;
+			break;
+			}
+		}
 	}
 pmktmp.psklen = psklen;
 addentry(&pmktmp);
@@ -556,7 +555,7 @@ return;
 __attribute__ ((noreturn))
 void version(char *eigenname)
 {
-printf("%s %s (C) %s ZeroBeat\n", eigenname, VERSION, VERSION_JAHR);
+printf("%s %s (C) %s ZeroBeat\n", eigenname, VERSION_TAG, VERSION_YEAR);
 exit(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------*/
@@ -570,10 +569,10 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"options:\n"
 	"-p <file> : input old hashcat potfile (<= 5.1.0)\n"
 	"            accepted potfiles: 2500 or 16800\n"
-	"-P <file> : output new potfile file (PMK:ESSID:PSK)\n"
+	"-P <file> : output new potfile file (PMK*ESSID:PSK)\n"
 	"-h        : show this help\n"
 	"-v        : show version\n"
-	"\n", eigenname, VERSION, VERSION_JAHR, eigenname);
+	"\n", eigenname, VERSION_TAG, VERSION_YEAR, eigenname);
 exit(EXIT_SUCCESS);
 }
 /*---------------------------------------------------------------------------*/
@@ -581,7 +580,7 @@ __attribute__ ((noreturn))
 void usageerror(char *eigenname)
 {
 printf("%s %s (C) %s by ZeroBeat\n"
-	"usage: %s -h for help\n", eigenname, VERSION, VERSION_JAHR, eigenname);
+	"usage: %s -h for help\n", eigenname, VERSION_TAG, VERSION_YEAR, eigenname);
 exit(EXIT_FAILURE);
 }
 /*===========================================================================*/

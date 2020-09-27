@@ -1,14 +1,19 @@
 #define ESSID_LEN_MAX 32
 #define PMKID_LINE_LEN 255
+#define PMKIDEAPOL_LINE_LEN 1024
 #define JOHN_LINE_LEN 1024
 #define PSKSTRING_LEN_MAX 64
 
 #define HCXD_NETGEAR			1
-#define HCXD_TENDA			2
-#define HCXD_WEAKPASS			3
-#define HCXD_EUDATE			4
-#define HCXD_USDATE			5
-#define HCXD_WPSKEYS			6
+#define HCXD_ASKEYARRIS			2
+#define HCXD_PHOME			3
+#define HCXD_TENDA			4
+#define HCXD_WEAKPASS			5
+#define HCXD_EUDATE			6
+#define HCXD_USDATE			7
+#define HCXD_WPSKEYS			8
+#define HCXD_DIGIT10			9
+#define HCXD_EGN			10
 #define HCXD_HELP			'h'
 #define HCXD_VERSION			'v'
 

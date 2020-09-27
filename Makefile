@@ -1,12 +1,27 @@
-PREFIX		?=/usr/local
-INSTALLDIR	= $(DESTDIR)$(PREFIX)/bin
+PRODUCTION		:= 0
+PRODUCTION_VERSION	:= 6.1.2
+PRODUCTION_YEAR		:= 2020
 
-HOSTOS := $(shell uname -s)
+ifeq ($(PRODUCTION),1)
+VERSION_TAG		:= $(PRODUCTION_VERSION)
+else
+VERSION_TAG		:= $(shell git describe --tags || echo $(PRODUCTION_VERSION))
+endif
+VERSION_YEAR		:= $(shell echo $(PRODUCTION_YEAR))
+
+PREFIX		?= /usr/local
+BINDIR		= $(DESTDIR)$(PREFIX)/bin
+MANDIR		= $(DESTDIR)$(PREFIX)/share/man
+
+HOSTOS		:= $(shell uname -s)
 
 CC		?= gcc
 CFLAGS		?= -O3 -Wall -Wextra
 CFLAGS		+= -std=gnu99
-INSTFLAGS	= -m 0755
+DEFS		= -DVERSION_TAG=\"$(VERSION_TAG)\" -DVERSION_YEAR=\"$(VERSION_YEAR)\"
+
+INSTALL		?= install
+INSTFLAGS	=
 
 ifeq ($(HOSTOS), Linux)
 INSTFLAGS += -D
@@ -16,36 +31,33 @@ ifeq ($(HOSTOS), Darwin)
 CFLAGS += -L/usr/local/opt/openssl/lib -I/usr/local/opt/openssl/include
 endif
 
-
 TOOLS=
-TOOLS+=hcxpcaptool
-hcxpcaptool_libs=-lz -lcrypto
+TOOLS+=hcxpcapngtool
+hcxpcapngtool_libs=-lz -lcrypto -lssl
+TOOLS+=hcxhashtool
+hcxhashtool_libs=-lcrypto -lssl -lcurl
 TOOLS+=hcxpsktool
-hcxpsktool_libs=-lcrypto
-TOOLS+=hcxhashcattool
-hcxhashcattool_libs=-lcrypto -lpthread
+hcxpsktool_libs=-lcrypto -lssl
 TOOLS+=hcxwltool
 TOOLS+=hcxhash2cap
-TOOLS+=wlanhc2hcx
-TOOLS+=wlanwkp2hcx
-TOOLS+=wlanhcxinfo
-TOOLS+=wlanhcx2essid
-TOOLS+=wlanhcx2ssid
-TOOLS+=wlanhcxmnc
-TOOLS+=wlanhashhcx
-TOOLS+=wlanhcxcat
-wlanhcxcat_libs=-lcrypto
-TOOLS+=wlanpmk2hcx
-wlanpmk2hcx_libs=-lcrypto
-TOOLS+=wlanjohn2hcx
-TOOLS+=wlancow2hcxpmk
-TOOLS+=whoismac
-whoismac_libs=-lcurl
-TOOLS+=wlanhcx2john
 TOOLS+=wlancap2wpasec
-wlancap2wpasec_libs=-lcurl
+wlancap2wpasec_libs=-lcrypto -lssl -lcurl
+TOOLS+=whoismac
+whoismac_libs=-lcrypto -lssl -lcurl
 
-.PHONY: build
+TOOLS+=hcxpmkidtool
+TOOLS+=hcxhashcattool
+hcxhashcattool_libs=-lcrypto -lssl -lpthread
+hcxpmkidtool_libs=-lcrypto -lssl -lpthread
+TOOLS+=hcxmactool
+TOOLS+=hcxessidtool
+TOOLS+=wlanpmk2hcx
+wlanpmk2hcx_libs=-lcrypto -lssl
+
+.PHONY: all build install clean uninstall
+
+all: build
+
 build: $(TOOLS)
 
 .deps:
@@ -57,13 +69,13 @@ $(1)_src ?= $(1).c
 $(1)_libs ?=
 
 $(1): $$($(1)_src) | .deps
-	$$(CC) $$(CFLAGS) $$(CPPFLAGS) -MMD -MF .deps/$$@.d -o $$@ $$($(1)_src) $$($(1)_libs) $$(LDFLAGS)
+	$$(CC) $$(CFLAGS) $$(CPPFLAGS) -MMD -MF .deps/$$@.d -o $$@ $$($(1)_src) $$($(1)_libs) $$(LDFLAGS) $$(DEFS)
 
 .deps/$(1).d: $(1)
 
 .PHONY: $(1).install
 $(1).install: $(1)
-	install $$(INSTFLAGS) $(1) $$(INSTALLDIR)/$(1)
+	$$(INSTALL) $$(INSTFLAGS) -m 0755 $(1) $$(BINDIR)/$(1)
 
 .PHONY: $(1).clean
 $(1).clean:
@@ -72,20 +84,30 @@ $(1).clean:
 
 .PHONY: $(1).uninstall
 $(1).uninstall:
-	rm -rf $$(INSTALLDIR)/$(1)
+	rm -rf $$(BINDIR)/$(1)
+
+ifneq ($(wildcard manpages/$(1).1),)
+.PHONY: $(1).man-install
+$(1).install: $(1).man-install
+$(1).man-install:
+	$$(INSTALL) $$(INSTFLAGS) -m 0644 manpages/$(1).1 $$(MANDIR)/man1/$(1).1
+
+.PHONY: $(1).man-uninstall
+$(1).uninstall: $(1).man-uninstall
+$(1).man-uninstall:
+	rm -rf $$(MANDIR)/man1/$(1).1
+endif
 
 endef
 
 $(foreach tool,$(TOOLS),$(eval $(call tool-build,$(tool))))
 
-.PHONY: install
 install: $(patsubst %,%.install,$(TOOLS))
 
-.PHONY: clean
 clean: $(patsubst %,%.clean,$(TOOLS))
 	rm -rf .deps
+	rm -f *.o *~
 
-.PHONY: uninstall
 uninstall: $(patsubst %,%.uninstall,$(TOOLS))
 
 -include .deps/*.d
